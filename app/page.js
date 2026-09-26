@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
+import Image from 'next/image'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import Lenis from 'lenis'
@@ -8,94 +9,120 @@ import './page.css'
 
 gsap.registerPlugin(ScrollTrigger)
 
-const images = [
-  'instasave.website_688549037_18541231726068893_1072576165778608652_n.jpg',
-  'instasave.website_688617132_18541231666068893_5742028462167331299_n.jpg',
-  'instasave.website_688617382_18541231744068893_6577689113296955558_n.jpg',
-  'instasave.website_687571270_18541231693068893_5000211992553548042_n.jpg',
-  'instasave.website_687809224_18541231639068893_6137561667965937503_n.jpg',
-  'instasave.website_670903001_18541231705068893_5066209653202030543_n.jpg',
-  'instasave.website_671269454_18541231603068893_2344313207098816469_n.jpg',
-]
+const photos = {
+  hero: 'instasave.website_688549037_18541231726068893_1072576165778608652_n.jpg',
+  dance: 'instasave.website_688617382_18541231744068893_6577689113296955558_n.jpg',
+  reflection: 'instasave.website_688617132_18541231666068893_5742028462167331299_n.jpg',
+  night: 'instasave.website_671269454_18541231603068893_2344313207098816469_n.jpg',
+  ending: 'instasave.website_670903001_18541231705068893_5066209653202030543_n.jpg',
+}
 
-function Photo({ n, alt, eager = false }) {
-  return <img src={'/images/' + images[n]} alt={alt} loading={eager ? 'eager' : 'lazy'} />
+function Photo({ name, alt, sizes, priority = false }) {
+  return <Image src={'/images/' + photos[name]} alt={alt} fill sizes={sizes} priority={priority} quality={86} />
 }
 
 export default function Home() {
   const root = useRef(null)
 
   useEffect(() => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-    const lenis = new Lenis({ duration: 1.1, smoothWheel: true })
-    const tick = (time) => lenis.raf(time * 1000)
-    gsap.ticker.add(tick)
-    lenis.on('scroll', ScrollTrigger.update)
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const desktop = window.matchMedia('(min-width: 900px)')
+    let lenis
+    let tick
+    if (!reduce && desktop.matches) {
+      lenis = new Lenis({ duration: 1.05, smoothWheel: true, wheelMultiplier: 0.9 })
+      tick = (time) => lenis.raf(time * 1000)
+      gsap.ticker.add(tick)
+      lenis.on('scroll', ScrollTrigger.update)
+    }
+
+    const mm = gsap.matchMedia()
     const ctx = gsap.context(() => {
-      gsap.from('.hero-title > *', { y: 50, opacity: 0, duration: 1.05, stagger: 0.12, ease: 'power3.out', delay: 0.15 })
-      gsap.from('.hero-photo', { scale: 1.06, opacity: 0, duration: 1.45, ease: 'power2.out' })
-      gsap.to('.hero-photo img', { yPercent: 8, ease: 'none', scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: true } })
-      gsap.utils.toArray('.rise').forEach((el) => {
-        gsap.from(el, { y: 36, opacity: 0, duration: 0.9, ease: 'power2.out', scrollTrigger: { trigger: el, start: 'top 90%' } })
-      })
-      gsap.to('.film-visual', { clipPath: 'inset(0% 0% 0% 0%)', ease: 'none', scrollTrigger: { trigger: '.film', start: 'top 85%', end: 'top 35%', scrub: true } })
+      if (!reduce) {
+        gsap.from('.hero-content > *', { y: 35, opacity: 0, duration: 0.9, stagger: 0.12, ease: 'power2.out', delay: 0.1 })
+        gsap.to('.hero-media img', { scale: 1.06, ease: 'none', scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: true } })
+      }
+      if (!reduce) {
+        mm.add('(min-width: 900px)', () => {
+          const track = root.current.querySelector('.rail-track')
+          const distance = () => track.scrollWidth - window.innerWidth
+          const tween = gsap.to(track, {
+            x: () => -distance(),
+            ease: 'none',
+            scrollTrigger: {
+              trigger: '.rail',
+              start: 'top top',
+              end: () => '+=' + Math.round(distance() * 1.18),
+              pin: true,
+              scrub: 0.85,
+              invalidateOnRefresh: true,
+              anticipatePin: 1,
+            },
+          })
+          return () => tween.scrollTrigger?.kill()
+        })
+      }
     }, root)
+
     ScrollTrigger.refresh()
-    return () => { ctx.revert(); gsap.ticker.remove(tick); lenis.destroy() }
+    return () => {
+      mm.revert()
+      ctx.revert()
+      if (tick) gsap.ticker.remove(tick)
+      lenis?.destroy()
+    }
   }, [])
 
   return <main ref={root}>
     <header className="site-header">
       <a className="wordmark" href="#top" aria-label="RP Films, back to top">RP<span>·</span>FILMS</a>
-      <span className="location">JAMMU & KASHMIR</span>
-      <a className="header-link" href="#contact">LET'S TALK <span aria-hidden="true">↗</span></a>
+      <span>JAMMU & KASHMIR</span>
+      <a href="#contact">ENQUIRE <span aria-hidden="true">↗</span></a>
     </header>
 
-    <section className="hero" id="top" aria-labelledby="hero-heading">
-      <div className="hero-photo"><Photo n={0} alt="Couple photographed against a deep red curtain" eager /></div>
-      <div className="hero-shade" />
-      <div className="hero-title">
-        <p className="eyebrow">WEDDING PHOTOGRAPHY & FILMS <span> / </span> ROHIT PANDIT</p>
-        <h1 id="hero-heading">The feeling<br /><em>stays.</em></h1>
-        <div className="hero-bottom"><span>For everything that happened<br />between the photographs.</span><a href="#introduction">SCROLL TO EXPLORE <span aria-hidden="true">↓</span></a></div>
+    <section className="hero" id="top" aria-labelledby="hero-title">
+      <div className="hero-media"><Photo name="hero" alt="Couple against deep red wedding drapery" sizes="(max-width: 899px) 100vw, 62vw" priority /></div>
+      <div className="hero-content">
+        <p className="small-label">ROHIT PANDIT FILMS <span>—</span> WEDDINGS IN JAMMU & BEYOND</p>
+        <h1 id="hero-title">A wedding,<br /><em>as it felt.</em></h1>
+        <div className="hero-foot"><span>PHOTOGRAPHY & FILMS<br />FOR THE MOMENTS THAT STAY</span><a href="#stories">EXPLORE THE STORIES <span aria-hidden="true">↓</span></a></div>
       </div>
-      <span className="hero-index" aria-hidden="true">RP / 01</span>
+      <div className="hero-side" aria-hidden="true">RP / AN ARCHIVE OF FEELING</div>
     </section>
 
-    <section className="introduction" id="introduction">
-      <div className="intro-top rise"><span className="eyebrow">THE WAY WE SEE IT</span><span className="intro-mark" aria-hidden="true">✳</span></div>
-      <p className="intro-statement rise">A wedding is never just one story.<br /><em>It's all the little ones happening at once.</em></p>
-      <div className="intro-bottom rise"><span>RP FILMS — JAMMU</span><p>We make photographs and films that bring you back to the people, the movement, and the feeling of being there.</p></div>
-    </section>
+    <section className="rail" id="stories" aria-label="Selected RP Films stories">
+      <div className="rail-track">
+        <article className="chapter chapter-portraits" aria-labelledby="portrait-title">
+          <div className="chapter-copy">
+            <div className="chapter-top"><span>01 / PORTRAITS</span><span>JAMMU, INDIA</span></div>
+            <div className="chapter-center"><p className="chapter-kicker">A PORTRAIT STUDY</p><h2 id="portrait-title">The space<br /><em>between</em><br />poses.</h2><p>Light, movement, a glance across the room. The moments that rarely happen twice.</p></div>
+            <div className="chapter-bottom"><span>RP FILMS / SELECTED FRAMES</span><span>01 — 02</span></div>
+          </div>
+          <div className="chapter-image">
+            <Photo name="dance" alt="Couple dancing under a wedding venue arch" sizes="(max-width: 899px) 100vw, 59vw" />
+            <div className="inset-photo"><Photo name="reflection" alt="Bride seen through light and reflections" sizes="(max-width: 899px) 32vw, 14vw" /></div>
+            <span className="image-caption">THE ROOM IN MOTION</span>
+          </div>
+        </article>
 
-    <section className="stills" id="stills" aria-labelledby="stills-heading">
-      <div className="stills-heading rise"><span className="eyebrow">01 / IN STILLS</span><h2 id="stills-heading">Held for<br /><em>a moment.</em></h2></div>
-      <div className="stills-composition">
-        <div className="stills-main"><Photo n={2} alt="Couple dancing beneath the wedding venue arch" /></div>
-        <div className="stills-side"><Photo n={1} alt="Bride captured through motion and reflections" /></div>
-        <p className="stills-note rise">The blur.<br />The glance.<br />The in-between.</p>
-      </div>
-    </section>
-
-    <section className="film" id="film" aria-labelledby="film-heading">
-      <div className="film-heading rise"><span className="eyebrow">02 / IN MOTION</span><h2 id="film-heading">And then<br /><em>it moves.</em></h2><p>Vandana & Vikas<br />A wedding film in Jammu.</p></div>
-      <div className="film-visual"><video src="/video/vandana-vikas-web.mp4" poster="/video/vandana-vikas-poster.jpg" muted loop autoPlay playsInline preload="metadata" aria-label="Short preview of Vandana and Vikas's wedding film" /></div>
-      <div className="film-caption"><span>VANDANA × VIKAS</span><span>JAMMU, INDIA</span></div>
-    </section>
-
-    <section className="frames" aria-labelledby="frames-heading">
-      <div className="frames-heading rise"><span className="eyebrow">A FEW FRAMES MORE</span><h2 id="frames-heading">Stay a little<br /><em>longer.</em></h2></div>
-      <div className="frames-gallery">
-        <figure className="frame-one"><Photo n={3} alt="Couple photographed against red drapery" /><figcaption>01 / THE QUIET</figcaption></figure>
-        <figure className="frame-two"><Photo n={6} alt="Bride in a dark garden before the celebration" /><figcaption>02 / THE WAIT</figcaption></figure>
-        <figure className="frame-three"><Photo n={4} alt="Couple walking together through a warmly lit wedding venue" /><figcaption>03 / THE NIGHT</figcaption></figure>
+        <article className="chapter chapter-film" aria-labelledby="film-title">
+          <div className="chapter-copy">
+            <div className="chapter-top"><span>02 / FILM</span><span>JAMMU, INDIA</span></div>
+            <div className="chapter-center"><p className="chapter-kicker">A STORY BROUGHT HOME</p><h2 id="film-title">Vandana<br /><em>& Vikas.</em></h2><p>From the USA to Jammu. Family, tradition, and a day full of movement.</p></div>
+            <div className="chapter-bottom"><span>26 SECOND FILM EXCERPT</span><span>02 — 02</span></div>
+          </div>
+          <div className="chapter-video">
+            <video src="/video/vandana-vikas-web.mp4" poster="/video/vandana-vikas-poster.jpg" autoPlay muted loop playsInline preload="metadata" aria-label="Short wedding film excerpt featuring Vandana and Vikas" />
+            <span className="video-caption">VANDANA × VIKAS / RP FILMS</span>
+          </div>
+        </article>
       </div>
     </section>
 
-    <footer id="contact">
-      <div className="footer-photo"><Photo n={5} alt="Bride and groom in front of a red curtain" /></div>
-      <div className="footer-content rise"><span className="eyebrow">YOUR STORY, NEXT</span><h2>Let's make<br /><em>it last.</em></h2><a className="contact-button" href="https://wa.me/919796816816" target="_blank" rel="noopener noreferrer">TELL US ABOUT YOUR DAY <span aria-hidden="true">↗</span></a></div>
-      <div className="footer-bottom"><span>RP FILMS / JAMMU & KASHMIR</span><a href="https://www.instagram.com/rpfilmsjammu/" target="_blank" rel="noopener noreferrer">INSTAGRAM ↗</a></div>
-    </footer>
+    <section className="closing" id="contact">
+      <div className="closing-photo"><Photo name="ending" alt="Wedding portrait beside red drapery" sizes="(max-width: 899px) 100vw, 55vw" /></div>
+      <div className="closing-content"><span className="small-label">RP FILMS / JAMMU</span><h2>Consider us<br />your friends,<br /><em>but with a camera.</em></h2><a className="contact-link" href="https://wa.me/919796816816" target="_blank" rel="noopener noreferrer">TELL US YOUR STORY <span aria-hidden="true">↗</span></a></div>
+      <div className="closing-foot"><span>WEDDINGS / PEOPLE / MEMORY</span><a href="https://www.instagram.com/rpfilmsjammu/" target="_blank" rel="noopener noreferrer">INSTAGRAM ↗</a></div>
+    </section>
   </main>
 }
